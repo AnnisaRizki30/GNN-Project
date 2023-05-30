@@ -1,0 +1,12 @@
+pandas
+seaborn
+pillow
+torch
+torch-geometric
+deepchem[torch]
+pytorch-lightning
+dm-haiku
+arm-mango
+mlflow
+rdkit
+dagshub
