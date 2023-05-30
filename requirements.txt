@@ -10,3 +10,4 @@ arm-mango
 mlflow
 rdkit
 dagshub
+streamlit

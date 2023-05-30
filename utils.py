@@ -4,12 +4,14 @@ import mlflow
 import deepchem as dc
 import requests
 import torch
+from torch_geometric.data import Dataset, Data
 import random
 import numpy as np
 import json
 import time
 
-mlflow.set_tracking_uri("http://localhost:5000")
+MLFLOW_TRACKING_URI="https://dagshub.com/annisarizkililiandari/GNN-Project.mlflow"
+mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
 
 def smiles_to_mol(smiles_string):
@@ -38,51 +40,33 @@ def mol_to_tensor_graph(mol):
     """
     featurizer = dc.feat.MolGraphConvFeaturizer(use_edges=True)
     f = featurizer.featurize(Chem.MolToSmiles(mol))
-    data = f[0].to_pyg_graph()
-    data["batch_index"] = torch.ones_like(data["x"][:, 0])
+    graph_data = f[0]
+    x=torch.tensor(graph_data.node_features, dtype=torch.float),
+    edge_attr = torch.tensor(graph_data.edge_features, dtype=torch.float)
+    edge_index = torch.tensor(graph_data.edge_index, dtype=torch.long).t().contiguous()
+    batch_index = torch.ones_like(x[0])
+    
+    data = Data(x=x[0], edge_attr=edge_attr, edge_index=edge_index)
+    data.batch_index = batch_index
+
     return data
 
 
 def get_model_predictions(payload):
     """
     Get model predictions  
-    ENDPOINT = Calls an endpoint to get the predictions
-    REGISTRY = Loads model from registry and predicts
-    MOCKED = Randomly generated prediction
     """
-    option="MOCKED"
+    logged_model = 'runs:/2283914e2064465eba39a94c270f1d3b/model'
 
-    if option == "ENDPOINT":
-        # Currently not supported for multi-input models
-        DEPLOYED_ENDPOINT = "http://127.0.0.1:5001/invocations"
-        headers = {"Content-Type":"application/json"}
-        prediction = requests.post(url=DEPLOYED_ENDPOINT, 
-                                   data={"inputs": {
-                                            "x": payload["x"].numpy(),
-                                            "edge_attr": payload["edge_attr"].numpy(),
-                                            "edge_index": payload["edge_index"].numpy().astype(np.int32),
-                                            "batch_index": np.expand_dims(payload["batch_index"].numpy().astype(np.int32), axis=1)
-                                        }}, headers=headers)
-        prediction = json.loads(prediction.content.decode("utf-8")) 
-    
-    if option == "REGISTRY":
-        # Currently not supported for multi-input models
-        model_name = "GraphTransformer"
-        model_version = "2"
-        model = mlflow.pyfunc.load_model(model_uri=f"models:/{model_name}/{model_version}")
+    model = mlflow.pyfunc.load_model(logged_model)
 
-
-        prediction = model.predict({
-            "x": payload["x"].numpy(),
-            "edge_attr": payload["edge_attr"].numpy(),
-            "edge_index": payload["edge_index"].numpy().astype(np.int32),
-            "batch_index": np.expand_dims(payload["batch_index"].numpy().astype(np.int32), axis=1)
-        })
+    prediction = model.predict({
+        "x": payload["x"].numpy(),
+        "edge_attr": payload["edge_attr"].numpy(),
+        "edge_index": payload["edge_index"].numpy().astype(np.int32),
+        "batch_index": np.expand_dims(payload["batch_index"].numpy().astype(np.int32), axis=1)
+    })
         
-    if option == "MOCKED":
-        # Fake API call
-        time.sleep(2)
-        prediction = random.choice([0,1])
 
     return prediction
 

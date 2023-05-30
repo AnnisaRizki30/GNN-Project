@@ -167,7 +167,9 @@ def run_one_training(params):
                     if float(loss) < best_loss:
                         best_loss = loss
                         # Save the currently best model 
-                        mlflow.pytorch.log_model(model, "model", signature=SIGNATURE)
+                        mlflow.pytorch.log_model(model, "model", 
+                                                 registered_model_name="GNN-HIV-ML",
+                                                 signature=SIGNATURE)
                         early_stopping_counter = 0
                     else:
                         early_stopping_counter += 1
