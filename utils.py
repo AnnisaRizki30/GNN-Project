@@ -9,6 +9,10 @@ import random
 import numpy as np
 import json
 import time
+import os 
+
+os.environ['MLFLOW_TRACKING_USERNAME'] = "annisarizkililiandari"
+os.environ['MLFLOW_TRACKING_PASSWORD'] = "b6b404ae65fe9ccbb08791fe0e90ff2152d9c35c"
 
 MLFLOW_TRACKING_URI="https://dagshub.com/annisarizkililiandari/GNN-Project.mlflow"
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
@@ -56,10 +60,11 @@ def get_model_predictions(payload):
     """
     Get model predictions  
     """
-    logged_model = 'runs:/2283914e2064465eba39a94c270f1d3b/model'
-
-    model = mlflow.pyfunc.load_model(logged_model)
-
+    model_name = "GNN-HIV"
+    model_version = "1"
+    
+    model = mlflow.pyfunc.load_model(model_uri=f"models:/{model_name}/{model_version}")
+    
     prediction = model.predict({
         "x": payload["x"].numpy(),
         "edge_attr": payload["edge_attr"].numpy(),
@@ -67,7 +72,6 @@ def get_model_predictions(payload):
         "batch_index": np.expand_dims(payload["batch_index"].numpy().astype(np.int32), axis=1)
     })
         
-
     return prediction
 
     
